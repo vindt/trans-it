@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "VDict",
+  "name": "TransIt",
   "description": "Advance Translate tool",
   "version": "0.1",
   "icons": {
@@ -18,6 +18,12 @@
       "js": ["scripts/content.js"],
       "matches": ["<all_urls>"],
       "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/*"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
