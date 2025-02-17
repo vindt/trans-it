@@ -115,6 +115,11 @@ async function translateTextStreaming(text) {
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
   });
 
+  if (response.status !== 200) {
+    console.log(`Something went wrong. Please try again later. Error: ${response.status}`);
+    return `Something went wrong. Please try again later.<br/>Error: ${response.status}`;
+  }
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let result = '';
