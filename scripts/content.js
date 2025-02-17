@@ -27,7 +27,17 @@ document.addEventListener(
 
     let icon = appendTranslateIcon(currentSelection);
 
-    icon.addEventListener('click', async function (event) {
+    icon.addEventListener('click', async function () {
+      await handleTranslation(currentSelection, orgText);
+    });
+
+    document.addEventListener('keydown', async function (event) {
+      if (event.key === 'Shift') {
+      await handleTranslation(currentSelection, orgText);
+      }
+    });
+
+    async function handleTranslation(currentSelection, orgText) {
       let loadingPopup = document.createElement('div');
       loadingPopup.className = POPUP_CLASS_NAME;
       loadingPopup.innerHTML = `<span style="font-size: small">Translating...</span>`;
@@ -66,7 +76,7 @@ document.addEventListener(
 
       let popup = document.createElement('div');
       popup.className = POPUP_CLASS_NAME;
-      popup.innerHTML = `<span style="font-size: medium">${translatedText}</span> <br>`;
+      popup.innerHTML = `<span style="font-size: medium; white-space: pre-wrap;">${translatedText}</span>`;
       popup.style.left = '0px';
       popup.style.top = '0px';
       popup.style.maxWidth = `${rect.width}px`;
@@ -91,7 +101,7 @@ document.addEventListener(
       popup.style.fontSize = '14px';
       popup.style.lineHeight = '1.5';
       popup.style.color = '#333';
-    });
+    }
     document.body.appendChild(icon);
   }, 250)
 );
@@ -104,6 +114,11 @@ async function translateTextStreaming(text) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
   });
+
+  if (response.status !== 200) {
+    console.log(`Something went wrong. Please try again later. Error: ${response.status}`);
+    return `Something went wrong. Please try again later.<br/>Error: ${response.status}`;
+  }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8');

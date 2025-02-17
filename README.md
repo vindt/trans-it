@@ -5,7 +5,7 @@ Follow these steps to set up a Chrome extension from an unpacked directory:
 1. **Download the Extension Files:**
   Download the extension files from the provided source or repository. Ensure the downloaded folder contains all the necessary files for the Chrome extension, including `manifest.json`, HTML, CSS, and JavaScript files. You can clone the repository using the following command:
   ```sh
-  git clone <your-git-repo-url>
+  git clone git@github.com:vindt/trans-it.git
   ```
 
 2. **Change API Key:**
