@@ -1,7 +1,7 @@
 const AI_MODEL = 'gemini-2.0-pro-exp-02-05';
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-const API_KEY = 'YOUR-API-KEY-HERE'; // Replace 'your-api-key-here' with your actual API key
+const API_KEY = 'AIzaSyCqwenFZXbrtYkivS71k_rDsF2Zqb0RLR0'; // Replace 'your-api-key-here' with your actual API key
 
 const ICON_CLASS_NAME = 'transIt-icon';
 const POPUP_CLASS_NAME = 'transIt-popup';
@@ -66,7 +66,7 @@ document.addEventListener(
 
       let popup = document.createElement('div');
       popup.className = POPUP_CLASS_NAME;
-      popup.innerHTML = `<span style="font-size: medium">${translatedText}</span> <br>`;
+      popup.innerHTML = `<span style="font-size: medium; white-space: pre-wrap;">${translatedText}</span>`;
       popup.style.left = '0px';
       popup.style.top = '0px';
       popup.style.maxWidth = `${rect.width}px`;
