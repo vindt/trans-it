@@ -1,7 +1,7 @@
 const AI_MODEL = 'gemini-2.0-pro-exp-02-05';
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
-const API_KEY = 'AIzaSyCqwenFZXbrtYkivS71k_rDsF2Zqb0RLR0'; // Replace 'your-api-key-here' with your actual API key
+const API_KEY = 'YOUR-API-KEY-HERE'; // Replace 'your-api-key-here' with your actual API key
 
 const ICON_CLASS_NAME = 'transIt-icon';
 const POPUP_CLASS_NAME = 'transIt-popup';
@@ -27,7 +27,17 @@ document.addEventListener(
 
     let icon = appendTranslateIcon(currentSelection);
 
-    icon.addEventListener('click', async function (event) {
+    icon.addEventListener('click', async function () {
+      await handleTranslation(currentSelection, orgText);
+    });
+
+    document.addEventListener('keydown', async function (event) {
+      if (event.key === 'Shift') {
+      await handleTranslation(currentSelection, orgText);
+      }
+    });
+
+    async function handleTranslation(currentSelection, orgText) {
       let loadingPopup = document.createElement('div');
       loadingPopup.className = POPUP_CLASS_NAME;
       loadingPopup.innerHTML = `<span style="font-size: small">Translating...</span>`;
@@ -91,7 +101,7 @@ document.addEventListener(
       popup.style.fontSize = '14px';
       popup.style.lineHeight = '1.5';
       popup.style.color = '#333';
-    });
+    }
     document.body.appendChild(icon);
   }, 250)
 );
