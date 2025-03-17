@@ -1,9 +1,16 @@
-const DEFAULT_MODEL = 'gemini-2.0-flash';
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
-
 const ICON_CLASS_NAME = 'transIt-icon';
 const POPUP_CLASS_NAME = 'transIt-popup';
 const ICON_PATH = 'images/icon-16.png';
+
+let importedInitCredentials;
+let importedTranslateTextStreaming;
+
+import('../common/utils.js').then(({ initCredentials, translateTextStreaming }) => {
+  importedInitCredentials = initCredentials;
+  importedTranslateTextStreaming = translateTextStreaming;
+}).catch(error => {
+  console.error('Failed to import functions from utils:', error);
+});
 
 document.addEventListener(
   'selectionchange',
@@ -29,7 +36,7 @@ document.addEventListener(
     icon.addEventListener('click', async function () {
       removeOldIconsAndPopup();
 
-      initCredentials(({ apiKey, aiModel }) => {
+      importedInitCredentials(({ apiKey, aiModel }) => {
         handleTranslation(rect, currentSelection.toString().trim(), apiKey, aiModel);
       });
     });
@@ -53,7 +60,7 @@ document.addEventListener('keydown', async function (event) {
       return;
     }
     const rect = currentSelection.getRangeAt(0).getBoundingClientRect();
-    initCredentials(async ({ apiKey, aiModel }) => {
+    importedInitCredentials(async ({ apiKey, aiModel }) => {
       handleTranslation(rect, orgText, apiKey, aiModel);
     });
   }
@@ -67,40 +74,12 @@ async function handleTranslation(rec, orgMsg, apiKey, aiModel) {
   loadingPopup.style.padding = '0';
   document.body.appendChild(loadingPopup); 
 
-  translateTextStreaming(orgMsg, apiKey, aiModel).then(res => {
+  importedTranslateTextStreaming(orgMsg, apiKey, aiModel).then(res => {
     if (document.body.contains(loadingPopup)) {
       document.body.removeChild(loadingPopup);
     }
     createPopup(res, rec);
   });
-}
-
-async function translateTextStreaming(text, apiKey, aiModel) {
-  const fullUrl = `${API_URL}${aiModel}:streamGenerateContent?alt=json&key=${apiKey}`;
-  const prompt = `Translate the following text to Vietnamese. Pay close attention to accuracy, technical terminology within the field of Information Technology, and maintain the original formatting as precisely as possible. Do not add any introductory or concluding phrases. Only output the translated Vietnamese text. The text to translate is: "${text}"`;
-  const response = await fetch(fullUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  });
-
-  if (response.status !== 200) {
-    return `Something went wrong. Please try again later.<br/>Error: ${response.status}`;
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let result = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    result += decoder.decode(value, { stream: true });
-  }
-
-  return JSON.parse(result)
-    .map((item) => item.candidates[0].content.parts[0].text)
-    .join('');
 }
 
 function appendTranslateIcon(rect) {
@@ -181,20 +160,3 @@ function getCurrentSelection() {
   return document.getSelection ? document.getSelection() : document.selection.createRange();
 }
 
-function initCredentials(callback) {
-  chrome.storage.sync.get(['apiKey', 'aiModel'], (result) => {
-    if (!result.apiKey) {
-      alert('Please provide an API key in the extension options.');
-      return;
-    }
-    const aiModel = result.aiModel || DEFAULT_MODEL;
-    if (!result.aiModel) {
-      chrome.storage.sync.set({ aiModel }, () => {
-        callback({ apiKey: result.apiKey, aiModel });
-      });
-    } else {
-      // console.log(`Using AI Model: ${aiModel}`);
-      callback({ apiKey: result.apiKey, aiModel });
-    }
-  });
-}
