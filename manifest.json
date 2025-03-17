@@ -24,6 +24,10 @@
     {
       "resources": ["images/*"],
       "matches": ["<all_urls>"]
+    },
+    {
+      "resources": ["common/*"],
+      "matches": ["<all_urls>"]
     }
   ],
   "permissions": [

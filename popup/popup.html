@@ -5,24 +5,46 @@
   <body>
     <h1>TransIT Tool</h1>
     <p>Translate detected languages to Vietnamese using Google Gemini, especially useful for IT context.</p>
-    <label for="apiKey">Enter API Key:</label>
-    <input type="text" id="apiKey" name="apiKey" required>
-    <label for="aiModel">Select AI Model:</label>
-    <p>Refer to <a href="https://ai.google.dev/gemini-api/docs/rate-limits#current-rate-limits" target="_blank">Gemini models rate limit</a> for more information.</p>
-    <select id="aiModel" name="aiModel" required>
-      <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-      <option value="gemini-2.0-flash-lite-preview-02-05">gemini-2.0-flash-lite-preview-02-05</option>
-      <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-      <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b</option>
-      <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-    </select>
-    <div class="btn-group">
-      <button id="cancelBtn" class="btn cancel-btn">Cancel</button>
-      <button id="saveBtn" class="btn save-btn">Save</button>
-      <button id="changeBtn" class="btn change-btn" style="display:none;">Change Setting</button>
+
+
+    <div class="tab">
+      <button class="tablinks" id="featureTabSwitch">New Feature</button>
+      <button class="tablinks" id="configTabSwitch">Extension Configuration</button>
     </div>
 
-    <script src="popup.js"></script>
+    <div id="featureTab" class="tabcontent">
+      <label for="userInput">Enter text:</label>
+      <textarea id="userInput" rows="4" cols="50"></textarea>
+      <div class="btn-group">
+        <button id="translateBtn" class="btn translate-btn">Translate</button>
+        <button id="correctBtn" class="btn correct-btn">Correct Grammar</button>
+      </div>
+      <h3>Output:</h3>
+      <p id="outputText"></p>
+    </div>
+    
+    <!-- Extension configuration tab-->
+    <div id="configTab" class="tabcontent">
+      <label for="apiKey">Enter API Key:</label>
+      <input type="text" id="apiKey" name="apiKey" required>
+      <label for="aiModel">Select AI Model:</label>
+      <p>Refer to <a href="https://ai.google.dev/gemini-api/docs/rate-limits#current-rate-limits" target="_blank">Gemini models rate limit</a> for more information.</p>
+      <select id="aiModel" name="aiModel" required>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+        <option value="gemini-2.0-flash-lite-preview-02-05">gemini-2.0-flash-lite-preview-02-05</option>
+        <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b</option>
+        <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+      </select>
+      <div class="btn-group">
+        <button id="cancelBtn" class="btn cancel-btn">Cancel</button>
+        <button id="saveBtn" class="btn save-btn">Save</button>
+        <button id="changeBtn" class="btn change-btn" style="display:none;">Change Setting</button>
+      </div>
+    </div>
+    <!-- Extension configuration tab-->
+
+    <script type="module" src="popup.js"></script>
     <footer>
       <p>&copy; 2025. All rights reserved.</p>
       <p><a href="https://github.com/vindt/trans-it" target="_blank">GitHub: TransIT</a></p>
