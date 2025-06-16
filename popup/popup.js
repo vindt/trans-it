@@ -6,14 +6,14 @@ const API_PROVIDER_ID = 'apiProvider';
 const AI_MODEL_ID = 'aiModel';
 const API_ENDPOINT_ID = 'apiEndpoint';
 const CUSTOM_PROMPT_ID = 'customPrompt';
-// Removed TARGET_LANGUAGE_ID constant
 const API_KEY_ID = 'apiKey';
-const STATUS_ELEMENT_ID = 'status';
+const STATUS_ELEMENT_ID = 'status'; // This might not be used directly anymore for toast, but keep it for reference
 const SAVE_SETTINGS_BTN_ID = 'saveSettings';
 const GO_TO_SETTINGS_BTN_ID = 'goToSettingsBtn';
 const BACK_TO_SPLASH_BTN_ID = 'backToSplashBtn';
 const CANCEL_SETTINGS_BTN_ID = 'cancelSettings';
 const RESET_PROMPT_BTN_ID = 'resetPromptBtn';
+const TOAST_CONTAINER_ID = 'toastContainer'; // New constant for toast container ID
 
 // Supported AI Models
 const AI_MODELS = {
@@ -66,25 +66,30 @@ function initPopup() {
     .addEventListener('change', updateModelAndEndpointDefaults);
 
   loadSettings();
-  updateModelAndEndpointDefaults();
 
+  // Initialize the popup's view and height after all content is loaded and settings are applied
   const splashScreen = document.getElementById(SPLASH_SCREEN_ID);
   const container = document.querySelector('.container');
 
+  // Temporarily make splashScreen visible and position it relatively to measure its height
   splashScreen.style.position = 'relative';
-  splashScreen.style.visibility = 'hidden';
-  splashScreen.classList.remove('hidden');
+  splashScreen.style.visibility = 'hidden'; // Keep hidden visually
+  splashScreen.classList.remove('hidden'); // Ensure it's not hidden by class for measurement
 
-  const initialHeight = splashScreen.scrollHeight + 100; // Increased buffer
-  container.style.height = `${initialHeight}px`;
+  // Use a small timeout to allow browser to render and calculate scrollHeight accurately
+  setTimeout(() => {
+    const initialHeight = splashScreen.scrollHeight; // No extra buffer
+    container.style.height = `${initialHeight}px`;
 
-  splashScreen.style.position = 'absolute';
-  splashScreen.style.visibility = 'visible';
-  splashScreen.classList.add('hidden');
-
-  switchView(SPLASH_SCREEN_ID);
+    // Reset splashScreen to its initial hidden state after measurement
+    splashScreen.style.position = 'absolute';
+    splashScreen.style.visibility = 'visible'; // This will be overridden by .hidden
+    splashScreen.classList.add('hidden'); // Re-hide it
+    switchView(SPLASH_SCREEN_ID); // Then display the correct initial view
+  }, 50); // Small delay
 }
 
+// Function to switch between views (splash screen and settings screen)
 function switchView(viewId) {
   const splashScreen = document.getElementById(SPLASH_SCREEN_ID);
   const settingsScreen = document.getElementById(SETTINGS_SCREEN_ID);
@@ -96,90 +101,112 @@ function switchView(viewId) {
   if (viewId === SETTINGS_SCREEN_ID) {
     targetView = settingsScreen;
     currentView = splashScreen;
+    loadSettings(); // Load settings when switching to settings view
   } else {
     targetView = splashScreen;
     currentView = settingsScreen;
   }
 
+  // Prepare target view for measurement
   targetView.style.position = 'relative';
-  targetView.style.visibility = 'hidden';
-  targetView.style.opacity = '0';
-  targetView.classList.remove('hidden');
+  targetView.style.visibility = 'hidden'; // Keep visually hidden
+  targetView.style.opacity = '0'; // Ensure it's not visible during measurement
+  targetView.classList.remove('hidden'); // Temporarily remove hidden class for scrollHeight calculation
 
-  const targetHeight = targetView.scrollHeight + 100; // Increased buffer
+  // Allow browser to render the targetView in its temporary state
+  requestAnimationFrame(() => {
+    const targetHeight = targetView.scrollHeight; // No extra buffer
 
-  container.style.height = `${targetHeight}px`;
+    // Adjust container height
+    container.style.height = `${targetHeight}px`;
 
-  setTimeout(() => {
-    currentView.classList.remove('active');
-    currentView.classList.add('hidden');
+    // After height transition, switch classes for the slide animation
+    // The timeout should match the container's height transition duration
+    setTimeout(() => {
+      currentView.classList.remove('active');
+      currentView.classList.add('hidden');
 
-    targetView.classList.remove('hidden');
-    targetView.classList.add('active');
+      targetView.classList.remove('hidden');
+      targetView.classList.add('active');
 
-    targetView.style.position = 'absolute';
-    targetView.style.visibility = 'visible';
-    targetView.style.opacity = '1';
-  }, 300);
+      // Reset targetView's position and visibility for the transition
+      targetView.style.position = 'absolute';
+      targetView.style.visibility = 'visible';
+      targetView.style.opacity = '1';
+    }, 300); // This timeout should match your CSS transition duration for transform/opacity
+  });
 }
 
+// --- NEW: Function to remove a specific toast message ---
+function removeToast(toastElement) {
+  if (toastElement && toastElement.parentNode) {
+    toastElement.classList.remove('show');
+    toastElement.style.opacity = '0';
+    toastElement.style.transform = 'translateY(-20px)'; // Slide up when disappearing
+    setTimeout(() => {
+      if (toastElement && toastElement.parentNode) {
+        toastElement.parentNode.removeChild(toastElement);
+      }
+    }, 300); // Match CSS transition duration
+  }
+}
+
+// Function to show status messages (toast)
 function showStatus(message, isError = false) {
-  const toastContainer = document.getElementById('toastContainer');
+  let toastContainer = document.getElementById(TOAST_CONTAINER_ID);
   if (!toastContainer) {
-    console.error('Toast container not found!');
-    return;
+    // Create toast container if it doesn't exist
+    toastContainer = document.createElement('div');
+    toastContainer.id = TOAST_CONTAINER_ID;
+    document.body.appendChild(toastContainer);
   }
 
-  const toast = document.createElement('div');
-  toast.textContent = message;
-  toast.classList.add('toast-message');
-  if (isError) {
-    toast.classList.add('error');
-  } else {
-    toast.classList.add('success');
-  }
+  const toastMessage = document.createElement('div');
+  toastMessage.classList.add('toast-message');
+  toastMessage.classList.add(isError ? 'error' : 'success');
 
-  toastContainer.appendChild(toast);
+  // Add the message text
+  const messageText = document.createElement('span');
+  messageText.textContent = message;
+  toastMessage.appendChild(messageText);
+
+  // Add the close button
+  const closeButton = document.createElement('button');
+  closeButton.classList.add('toast-close-btn');
+  closeButton.innerHTML = '&times;'; // 'x' icon
+  closeButton.title = 'Dismiss message';
+  closeButton.addEventListener('click', () => removeToast(toastMessage)); // Attach click listener
+  toastMessage.appendChild(closeButton);
+
+  toastContainer.appendChild(toastMessage);
 
   requestAnimationFrame(() => {
-    toast.classList.add('show');
+    toastMessage.classList.add('show');
   });
 
-  setTimeout(() => {
-    toast.classList.remove('show');
-    toast.addEventListener(
-      'transitionend',
-      () => {
-        if (toast.parentNode) {
-          toast.parentNode.removeChild(toast);
-        }
-      },
-      { once: true }
-    );
-  }, 3000);
+  if (!isError) {
+    setTimeout(() => removeToast(toastMessage), 3000);
+  }
 }
 
 function loadSettings() {
   chrome.storage.sync.get(
-    [
-      'apiProvider',
-      'apiKey',
-      'apiEndpoint',
-      'aiModel',
-      'customPrompt', // Removed 'targetLanguage'
-    ],
+    ['apiProvider', 'apiKey', 'apiEndpoint', 'aiModel', 'customPrompt'],
     function (items) {
       document.getElementById(API_PROVIDER_ID).value =
         items.apiProvider || 'gemini';
       document.getElementById(API_KEY_ID).value = items.apiKey || '';
-      document.getElementById(API_ENDPOINT_ID).value = items.apiEndpoint || '';
+      document.getElementById(API_ENDPOINT_ID).value =
+        items.apiEndpoint || DEFAULT_ENDPOINTS['gemini'];
       document.getElementById(CUSTOM_PROMPT_ID).value =
         items.customPrompt || DEFAULT_TRANSLATION_PROMPT;
-      // Removed line for targetLanguage: document.getElementById(TARGET_LANGUAGE_ID).value = items.targetLanguage || 'vi';
 
       updateModelAndEndpointDefaults();
       if (items.aiModel) {
         document.getElementById(AI_MODEL_ID).value = items.aiModel;
+      } else {
+        document.getElementById(AI_MODEL_ID).value =
+          document.getElementById(AI_MODEL_ID).options[0]?.value || '';
       }
     }
   );
@@ -191,15 +218,14 @@ function saveSettings() {
   const apiEndpoint = document.getElementById(API_ENDPOINT_ID).value;
   const aiModel = document.getElementById(AI_MODEL_ID).value;
   const customPrompt = document.getElementById(CUSTOM_PROMPT_ID).value;
-  // Removed targetLanguage variable: const targetLanguage = document.getElementById(TARGET_LANGUAGE_ID).value;
 
   chrome.storage.sync.set(
     {
-      apiProvider,
-      apiKey,
-      apiEndpoint,
-      aiModel,
-      customPrompt, // Removed targetLanguage
+      apiProvider: apiProvider,
+      apiKey: apiKey,
+      apiEndpoint: apiEndpoint,
+      aiModel: aiModel,
+      customPrompt: customPrompt,
     },
     function () {
       if (chrome.runtime.lastError) {
