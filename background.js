@@ -11,8 +11,6 @@ async function getExtensionSettings() {
 
 // Function to make API call for translation
 async function getTranslatedText(textToTranslate) {
-  console.log(`Background: Requesting translation for: "${textToTranslate}"`);
-
   const settings = await getExtensionSettings();
 
   const { apiProvider, apiKey, apiEndpoint, aiModel, customPrompt } = settings;
@@ -151,7 +149,6 @@ async function getTranslatedText(textToTranslate) {
 
     return translatedText;
   } catch (error) {
-    console.error('Background: Fetch error:', error);
     throw new Error(
       `Failed to get translation: ${
         error.message || 'Network or unexpected error occurred.'
@@ -166,9 +163,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.text && message.rect) {
       getTranslatedText(message.text)
         .then((translated) => {
-          console.log(
-            `Background: Translated "${message.text}" to "${translated}". Sending to content script in tab ${sender.tab.id}`
-          );
           // Send the translated text and the original rect back to the content script
           chrome.tabs
             .sendMessage(sender.tab.id, {
@@ -180,10 +174,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               sendResponse({ success: true }); // Acknowledge to content script
             })
             .catch((error) => {
-              console.error(
-                'Background: Error sending message to content script:',
-                error
-              );
               sendResponse({
                 success: false,
                 error:
@@ -192,8 +182,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
         })
         .catch((error) => {
-          console.error('Background: Translation API error:', error);
-          // Send error back to content script to display in tooltip or log
           chrome.tabs
             .sendMessage(sender.tab.id, {
               action: 'displayTranslationError', // New action for errors
@@ -205,10 +193,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               sendResponse({ success: false, error: error.message });
             })
             .catch((sendError) => {
-              console.error(
-                'Background: Error sending error message to content script:',
-                sendError
-              );
               sendResponse({
                 success: false,
                 error:

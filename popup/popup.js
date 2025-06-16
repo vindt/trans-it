@@ -19,8 +19,14 @@ const RESET_PROMPT_BTN_ID = 'resetPromptBtn';
 const AI_MODELS = {
   gemini: [
     { value: 'gemini-pro', text: 'Gemini Pro' },
-    { value: 'gemini-1.5-flash-latest', text: 'Gemini 1.5 Flash (Latest)' },
-    { value: 'gemini-1.5-pro-latest', text: 'Gemini 1.5 Pro (Latest)' },
+    { value: 'gemini-2.5-flash-preview-05-20', text: 'Gemini 2.5 Flash (Preview)' },
+    { value: 'gemini-2.5-flash-preview-tts', text: 'Gemini 2.5 Flash (Preview TTS)' },
+    { value: 'gemini-2.5-pro-preview-06-05', text: 'Gemini 2.5 Pro (Preview)' },
+    { value: 'gemini-2.5-pro-preview-tts', text: 'Gemini 2.5 Pro (Preview TTS)' },
+    { value: 'gemini-2.0-flash', text: 'Gemini 2.0 Flash (Latest)' },
+    { value: 'gemini-2.0-flash-lite', text: 'Gemini 2.0 Flash Lite (Latest)' },
+    { value: 'gemini-1.5-flash', text: 'Gemini 1.5 Flash (Latest)' },
+    { value: 'gemini-1.5-pro', text: 'Gemini 1.5 Pro (Latest)' },
   ],
   openai: [
     { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' },
