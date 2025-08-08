@@ -1,3 +1,5 @@
+// content/content.js
+
 let currentTooltip = null;
 let dismissListenerAdded = false;
 let lastSelectedText = '';
@@ -35,22 +37,35 @@ function handleDocumentClick(event) {
   }
 }
 
-async function showTranslationTooltip(translatedText, overallSelectionRect) {
+// MODIFIED: Added isError parameter to handle text/html safely
+async function showTranslationTooltip(translatedText, overallSelectionRect, isError = false) {
   removeTooltip();
   removeTranslationIcon();
   hideLoadingAnimation();
+
   currentTooltip = document.createElement('div');
   currentTooltip.id = 'translation-tooltip';
-  currentTooltip.innerHTML = translatedText;
+
+  // --- FIX 1: SECURELY SET TOOLTIP CONTENT ---
+  if (isError) {
+    // For internally generated error messages, textContent is safest.
+    currentTooltip.textContent = translatedText;
+  } else {
+    // For API responses, sanitize the HTML with DOMPurify before using innerHTML.
+    // This allows safe tags (like <b>, <i>, <br>) but removes dangerous ones (<script>).
+    currentTooltip.innerHTML = DOMPurify.sanitize(translatedText);
+  }
+  // --- END FIX 1 ---
+
   currentTooltip.style.maxWidth = `${Math.max(
     overallSelectionRect.width,
     200
   )}px`;
   document.body.appendChild(currentTooltip);
+
   requestAnimationFrame(() => {
-    if (!currentTooltip) {
-      return;
-    }
+    if (!currentTooltip) return;
+
     const tooltipRect = currentTooltip.getBoundingClientRect();
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
@@ -58,47 +73,35 @@ async function showTranslationTooltip(translatedText, overallSelectionRect) {
     const scrollX = window.scrollX || window.pageXOffset;
     const padding = 10;
     let finalLeft;
-    const selectionCenterX =
-      overallSelectionRect.left + overallSelectionRect.width / 2;
+    const selectionCenterX = overallSelectionRect.left + overallSelectionRect.width / 2;
     finalLeft = selectionCenterX - tooltipRect.width / 2;
     finalLeft += scrollX;
+
     if (finalLeft < scrollX) {
       finalLeft = scrollX;
     } else if (finalLeft + tooltipRect.width > viewportWidth + scrollX) {
       finalLeft = viewportWidth + scrollX - tooltipRect.width;
-      if (finalLeft < scrollX) {
-        finalLeft = scrollX;
-      }
+      if (finalLeft < scrollX) finalLeft = scrollX;
     }
+
     let finalTop;
     const potentialTopBelow = overallSelectionRect.bottom + padding + scrollY;
-    const potentialTopAbove =
-      overallSelectionRect.top - tooltipRect.height - padding + scrollY;
+    const potentialTopAbove = overallSelectionRect.top - tooltipRect.height - padding + scrollY;
+
     if (potentialTopBelow + tooltipRect.height <= viewportHeight + scrollY) {
       finalTop = potentialTopBelow;
       currentTooltip.classList.add('tooltip-below-selection');
-      currentTooltip.classList.remove('tooltip-above-selection');
     } else if (potentialTopAbove >= scrollY) {
       finalTop = potentialTopAbove;
       currentTooltip.classList.add('tooltip-above-selection');
-      currentTooltip.classList.remove('tooltip-below-selection');
     } else {
-      if (potentialTopBelow >= scrollY) {
-        finalTop = potentialTopBelow;
-        currentTooltip.classList.add('tooltip-below-selection');
-        currentTooltip.classList.remove('tooltip-above-selection');
-      } else {
-        finalTop = Math.max(
-          scrollY,
-          overallSelectionRect.top + scrollY - tooltipRect.height
-        );
-        currentTooltip.classList.add('tooltip-above-selection');
-        currentTooltip.classList.remove('tooltip-below-selection');
-      }
+      finalTop = potentialTopBelow;
+      currentTooltip.classList.add('tooltip-below-selection');
     }
     currentTooltip.style.left = `${Math.floor(finalLeft)}px`;
     currentTooltip.style.top = `${Math.floor(finalTop)}px`;
     currentTooltip.classList.add('show');
+
     if (!dismissListenerAdded) {
       setTimeout(() => {
         document.addEventListener('click', handleDocumentClick);
@@ -108,22 +111,30 @@ async function showTranslationTooltip(translatedText, overallSelectionRect) {
   });
 }
 
+
 function showTranslationIcon(selectionRect) {
   removeTooltip();
   hideLoadingAnimation();
   if (!translationIcon) {
     translationIcon = document.createElement('div');
     translationIcon.id = 'translation-icon';
-    // MODIFIED: using browser.runtime.getURL
-    translationIcon.innerHTML = `<img src="${browser.runtime.getURL(
-      'images/icon48.png'
-    )}" alt="Translate" title="Click to Translate">`;
     document.body.appendChild(translationIcon);
+
+    // --- FIX 2: USE DOM MANIPULATION INSTEAD OF innerHTML ---
+    translationIcon.textContent = ''; // Clear previous content
+    const img = document.createElement('img');
+    img.src = browser.runtime.getURL('images/icon48.png');
+    img.alt = 'Translate';
+    img.title = 'Click to Translate';
+    translationIcon.appendChild(img);
+    // --- END FIX 2 ---
+
     translationIcon.style.opacity = '0';
     translationIcon.style.visibility = 'hidden';
     translationIcon.style.pointerEvents = 'none';
     translationIcon.addEventListener('click', handleIconClick);
   }
+
   const iconRect = translationIcon.getBoundingClientRect();
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
@@ -131,45 +142,29 @@ function showTranslationIcon(selectionRect) {
   const scrollX = window.scrollX || window.pageXOffset;
   const padding = 10;
   let finalLeft, finalTop;
-  const belowLeft =
-    selectionRect.left + selectionRect.width / 2 - iconRect.width / 2;
+  const belowLeft = selectionRect.left + selectionRect.width / 2 - iconRect.width / 2;
   const belowTop = selectionRect.bottom + padding;
   const rightLeft = selectionRect.right + padding;
-  const rightTop =
-    selectionRect.top + selectionRect.height / 2 - iconRect.height / 2;
-  const aboveLeft =
-    selectionRect.left + selectionRect.width / 2 - iconRect.width / 2;
+  const rightTop = selectionRect.top + selectionRect.height / 2 - iconRect.height / 2;
+  const aboveLeft = selectionRect.left + selectionRect.width / 2 - iconRect.width / 2;
   const aboveTop = selectionRect.top - iconRect.height - padding;
-  if (
-    belowTop + iconRect.height <= viewportHeight &&
-    belowLeft >= 0 &&
-    belowLeft + iconRect.width <= viewportWidth
-  ) {
+
+  if (belowTop + iconRect.height <= viewportHeight && belowLeft >= 0 && belowLeft + iconRect.width <= viewportWidth) {
     finalLeft = belowLeft + scrollX;
     finalTop = belowTop + scrollY;
-  } else if (
-    rightLeft + iconRect.width <= viewportWidth &&
-    rightTop >= 0 &&
-    rightTop + iconRect.height <= viewportHeight
-  ) {
+  } else if (rightLeft + iconRect.width <= viewportWidth && rightTop >= 0 && rightTop + iconRect.height <= viewportHeight) {
     finalLeft = rightLeft + scrollX;
     finalTop = rightTop + scrollY;
-  } else if (
-    aboveTop >= 0 &&
-    aboveLeft >= 0 &&
-    aboveLeft + iconRect.width <= viewportWidth
-  ) {
+  } else if (aboveTop >= 0 && aboveLeft >= 0 && aboveLeft + iconRect.width <= viewportWidth) {
     finalLeft = aboveLeft + scrollX;
     finalTop = aboveTop + scrollY;
   } else {
     finalLeft = selectionRect.right + scrollX - iconRect.width;
     finalTop = selectionRect.bottom + scrollY + padding;
     if (finalLeft < scrollX) finalLeft = scrollX;
-    if (finalLeft + iconRect.width > viewportWidth + scrollX)
-      finalLeft = viewportWidth + scrollX - iconRect.width;
+    if (finalLeft + iconRect.width > viewportWidth + scrollX) finalLeft = viewportWidth + scrollX - iconRect.width;
     if (finalTop < scrollY) finalTop = scrollY;
-    if (finalTop + iconRect.height > viewportHeight + scrollY)
-      finalTop = viewportHeight + scrollY - iconRect.height;
+    if (finalTop + iconRect.height > viewportHeight + scrollY) finalTop = viewportHeight + scrollY - iconRect.height;
   }
   translationIcon.style.left = `${Math.floor(finalLeft)}px`;
   translationIcon.style.top = `${Math.floor(finalTop)}px`;
@@ -265,24 +260,16 @@ async function handleIconClick() {
     if (selectionRect.width > 0 || selectionRect.height > 0) {
       lastSelectedText = selectedText;
       lastSelectionRect = {
-        x: selectionRect.x,
-        y: selectionRect.y,
-        width: selectionRect.width,
-        height: selectionRect.height,
-        top: selectionRect.top,
-        right: selectionRect.right,
-        bottom: selectionRect.bottom,
-        left: selectionRect.left,
+        x: selectionRect.x, y: selectionRect.y, width: selectionRect.width,
+        height: selectionRect.height, top: selectionRect.top, right: selectionRect.right,
+        bottom: selectionRect.bottom, left: selectionRect.left,
       };
       if (!isTranslating) {
         isTranslating = true;
         showLoadingAnimation(lastSelectionRect);
         try {
-          // MODIFIED: using browser.runtime.sendMessage with async/await
           const response = await browser.runtime.sendMessage({
-            action: 'translateText',
-            text: lastSelectedText,
-            rect: lastSelectionRect,
+            action: 'translateText', text: lastSelectedText, rect: lastSelectionRect,
           });
           if (response && !response.success) {
             console.error('Content Script: Translation request failed:', response.error);
@@ -304,10 +291,7 @@ async function handleIconClick() {
 }
 
 document.addEventListener('mouseup', function (event) {
-  if (
-    currentTooltip ||
-    (loadingAnimation && loadingAnimation.style.visibility === 'visible')
-  ) {
+  if (currentTooltip || (loadingAnimation && loadingAnimation.style.visibility === 'visible')) {
     removeTranslationIcon();
     return;
   }
@@ -317,23 +301,14 @@ document.addEventListener('mouseup', function (event) {
     const range = selection.getRangeAt(0);
     const selectionRect = range.getBoundingClientRect();
     if (selectionRect.width > 0 || selectionRect.height > 0) {
-      if (
-        selectedText === lastSelectedText &&
-        translationIcon &&
-        translationIcon.style.visibility === 'visible'
-      ) {
+      if (selectedText === lastSelectedText && translationIcon && translationIcon.style.visibility === 'visible') {
         return;
       }
       lastSelectedText = selectedText;
       lastSelectionRect = {
-        x: selectionRect.x,
-        y: selectionRect.y,
-        width: selectionRect.width,
-        height: selectionRect.height,
-        top: selectionRect.top,
-        right: selectionRect.right,
-        bottom: selectionRect.bottom,
-        left: selectionRect.left,
+        x: selectionRect.x, y: selectionRect.y, width: selectionRect.width,
+        height: selectionRect.height, top: selectionRect.top, right: selectionRect.right,
+        bottom: selectionRect.bottom, left: selectionRect.left,
       };
       showTranslationIcon(lastSelectionRect);
     } else {
@@ -354,17 +329,8 @@ document.addEventListener('mouseup', function (event) {
 
 document.addEventListener('selectionchange', function () {
   const selection = window.getSelection();
-  if (
-    !selection ||
-    selection.rangeCount === 0 ||
-    selection.isCollapsed ||
-    selection.toString().trim().length === 0
-  ) {
-    if (
-      lastSelectedText !== '' ||
-      (translationIcon && translationIcon.style.visibility === 'visible') ||
-      (loadingAnimation && loadingAnimation.style.visibility === 'visible')
-    ) {
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed || selection.toString().trim().length === 0) {
+    if (lastSelectedText !== '' || (translationIcon && translationIcon.style.visibility === 'visible') || (loadingAnimation && loadingAnimation.style.visibility === 'visible')) {
       lastSelectedText = '';
       lastSelectionRect = null;
       removeTooltip();
@@ -387,22 +353,14 @@ document.addEventListener('keydown', async function (event) {
           isTranslating = true;
           lastSelectedText = currentSelectedText;
           lastSelectionRect = {
-            x: currentSelectionRect.x,
-            y: currentSelectionRect.y,
-            width: currentSelectionRect.width,
-            height: currentSelectionRect.height,
-            top: currentSelectionRect.top,
-            right: currentSelectionRect.right,
-            bottom: currentSelectionRect.bottom,
-            left: currentSelectionRect.left,
+            x: currentSelectionRect.x, y: currentSelectionRect.y, width: currentSelectionRect.width,
+            height: currentSelectionRect.height, top: currentSelectionRect.top, right: currentSelectionRect.right,
+            bottom: currentSelectionRect.bottom, left: currentSelectionRect.left,
           };
           showLoadingAnimation(lastSelectionRect);
           try {
-            // MODIFIED: using browser.runtime.sendMessage with async/await
             const response = await browser.runtime.sendMessage({
-              action: 'translateText',
-              text: lastSelectedText,
-              rect: lastSelectionRect,
+              action: 'translateText', text: lastSelectedText, rect: lastSelectionRect,
             });
             if (response && !response.success) {
               console.error('Content Script: Translation request failed:', response.error);
@@ -436,14 +394,11 @@ document.addEventListener('keyup', function (event) {
   }
 });
 
-// MODIFIED: using browser.runtime.onMessage
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender) => {
   if (message.action === 'displayTranslation') {
     hideLoadingAnimation();
     if (message.translatedText && message.selectionRect) {
-      showTranslationTooltip(message.translatedText, message.selectionRect);
-      // In a promise-based listener, you can return a promise
-      // or use sendResponse for simple cases. Returning true is not needed.
+      showTranslationTooltip(message.translatedText, message.selectionRect, false);
       return Promise.resolve({ success: true });
     } else {
       return Promise.resolve({ success: false, error: 'Missing data.' });
@@ -451,11 +406,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.action === 'displayTranslationError') {
     hideLoadingAnimation();
     if (message.errorMessage && message.selectionRect) {
-      showTranslationTooltip(
-        `Error: ${message.errorMessage}`,
-        message.selectionRect,
-        true
-      );
+      showTranslationTooltip(`Error: ${message.errorMessage}`, message.selectionRect, true);
       return Promise.resolve({ success: true });
     } else {
       return Promise.resolve({ success: false, error: 'Missing error data.' });
