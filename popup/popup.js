@@ -7,15 +7,13 @@ const AI_MODEL_ID = 'aiModel';
 const API_ENDPOINT_ID = 'apiEndpoint';
 const CUSTOM_PROMPT_ID = 'customPrompt';
 const API_KEY_ID = 'apiKey';
-const STATUS_ELEMENT_ID = 'status'; // This might not be used directly anymore for toast, but keep it for reference
 const SAVE_SETTINGS_BTN_ID = 'saveSettings';
 const GO_TO_SETTINGS_BTN_ID = 'goToSettingsBtn';
 const BACK_TO_SPLASH_BTN_ID = 'backToSplashBtn';
 const CANCEL_SETTINGS_BTN_ID = 'cancelSettings';
 const RESET_PROMPT_BTN_ID = 'resetPromptBtn';
-const TOAST_CONTAINER_ID = 'toastContainer'; // New constant for toast container ID
+const TOAST_CONTAINER_ID = 'toastContainer';
 
-// Supported AI Models
 const AI_MODELS = {
   gemini: [
     { value: 'gemini-pro', text: 'Gemini Pro' },
@@ -36,14 +34,30 @@ const AI_MODELS = {
   ],
 };
 
-// Default API Endpoints
 const DEFAULT_ENDPOINTS = {
   gemini: 'https://generativelanguage.googleapis.com/v1beta/models/',
   openai: 'https://api.openai.com/v1/chat/completions',
 };
 
-const DEFAULT_TRANSLATION_PROMPT =
-  'Detect the language of the following text, then translate it into Vietnamese, focusing on accuracy, technical terminology (especially in Information Technology), and preserving original formatting. Do not include any introductory or concluding phrases, just the translated text: "{text}"';
+const DEFAULT_TRANSLATION_PROMPT = `### ROLE AND GOAL
+You are an expert technical translator specializing in Information Technology (IT) and software development localization. Your sole task is to translate the provided text into Vietnamese with the highest degree of technical and contextual accuracy.
+
+### CORE DIRECTIVES
+
+1.  **IT Contextual Accuracy:** Prioritize IT industry-standard terminology.
+    *   **Example 1:** Translate "framework" as "framework" or "nền tảng" not the literal "khung làm việc"
+    *   **Example 2:** "clean code" must be "clean code" not the literal "mã sạch."
+    *   **Example 3:** A Git "commit" must be translated as "commit," not "cam kết"
+    *   **Example 4:** "Deployment" must be "deployment" or "triển khai."
+    *   For ambiguous terms, choose the meaning most relevant to software, networking, or data science.
+
+2.  **Format Preservation:** Strictly maintain the original formatting of the source text. This includes all line breaks, paragraph spacing, markdown (\`**bold**\`, \`*italics*\`), lists, and \`code blocks\`.
+
+3.  **Output Purity:** Your response must contain **only** the translated Vietnamese text. Do not include any headers, explanations, greetings, or any text other than the direct translation itself.
+
+### TASK
+
+Translate the following text:`;
 
 function initPopup() {
   document
@@ -67,29 +81,24 @@ function initPopup() {
 
   loadSettings();
 
-  // Initialize the popup's view and height after all content is loaded and settings are applied
   const splashScreen = document.getElementById(SPLASH_SCREEN_ID);
   const container = document.querySelector('.container');
 
-  // Temporarily make splashScreen visible and position it relatively to measure its height
   splashScreen.style.position = 'relative';
-  splashScreen.style.visibility = 'hidden'; // Keep hidden visually
-  splashScreen.classList.remove('hidden'); // Ensure it's not hidden by class for measurement
+  splashScreen.style.visibility = 'hidden';
+  splashScreen.classList.remove('hidden');
 
-  // Use a small timeout to allow browser to render and calculate scrollHeight accurately
   setTimeout(() => {
-    const initialHeight = splashScreen.scrollHeight; // No extra buffer
+    const initialHeight = splashScreen.scrollHeight;
     container.style.height = `${initialHeight}px`;
 
-    // Reset splashScreen to its initial hidden state after measurement
     splashScreen.style.position = 'absolute';
-    splashScreen.style.visibility = 'visible'; // This will be overridden by .hidden
-    splashScreen.classList.add('hidden'); // Re-hide it
-    switchView(SPLASH_SCREEN_ID); // Then display the correct initial view
-  }, 50); // Small delay
+    splashScreen.style.visibility = 'visible';
+    splashScreen.classList.add('hidden');
+    switchView(SPLASH_SCREEN_ID);
+  }, 50);
 }
 
-// Function to switch between views (splash screen and settings screen)
 function switchView(viewId) {
   const splashScreen = document.getElementById(SPLASH_SCREEN_ID);
   const settingsScreen = document.getElementById(SETTINGS_SCREEN_ID);
@@ -101,152 +110,118 @@ function switchView(viewId) {
   if (viewId === SETTINGS_SCREEN_ID) {
     targetView = settingsScreen;
     currentView = splashScreen;
-    loadSettings(); // Load settings when switching to settings view
+    loadSettings();
   } else {
     targetView = splashScreen;
     currentView = settingsScreen;
   }
 
-  // Prepare target view for measurement
   targetView.style.position = 'relative';
-  targetView.style.visibility = 'hidden'; // Keep visually hidden
-  targetView.style.opacity = '0'; // Ensure it's not visible during measurement
-  targetView.classList.remove('hidden'); // Temporarily remove hidden class for scrollHeight calculation
+  targetView.style.visibility = 'hidden';
+  targetView.style.opacity = '0';
+  targetView.classList.remove('hidden');
 
-  // Allow browser to render the targetView in its temporary state
   requestAnimationFrame(() => {
-    const targetHeight = targetView.scrollHeight; // No extra buffer
-
-    // Adjust container height
+    const targetHeight = targetView.scrollHeight;
     container.style.height = `${targetHeight}px`;
-
-    // After height transition, switch classes for the slide animation
-    // The timeout should match the container's height transition duration
     setTimeout(() => {
       currentView.classList.remove('active');
       currentView.classList.add('hidden');
-
       targetView.classList.remove('hidden');
       targetView.classList.add('active');
-
-      // Reset targetView's position and visibility for the transition
       targetView.style.position = 'absolute';
       targetView.style.visibility = 'visible';
       targetView.style.opacity = '1';
-    }, 300); // This timeout should match your CSS transition duration for transform/opacity
+    }, 150);
   });
 }
 
-// --- NEW: Function to remove a specific toast message ---
 function removeToast(toastElement) {
   if (toastElement && toastElement.parentNode) {
     toastElement.classList.remove('show');
     toastElement.style.opacity = '0';
-    toastElement.style.transform = 'translateY(-20px)'; // Slide up when disappearing
+    toastElement.style.transform = 'translateY(-20px)';
     setTimeout(() => {
       if (toastElement && toastElement.parentNode) {
         toastElement.parentNode.removeChild(toastElement);
       }
-    }, 300); // Match CSS transition duration
+    }, 300);
   }
 }
 
-// Function to show status messages (toast)
 function showStatus(message, isError = false) {
   let toastContainer = document.getElementById(TOAST_CONTAINER_ID);
   if (!toastContainer) {
-    // Create toast container if it doesn't exist
     toastContainer = document.createElement('div');
     toastContainer.id = TOAST_CONTAINER_ID;
     document.body.appendChild(toastContainer);
   }
-
   const toastMessage = document.createElement('div');
   toastMessage.classList.add('toast-message');
   toastMessage.classList.add(isError ? 'error' : 'success');
-
-  // Add the message text
   const messageText = document.createElement('span');
   messageText.textContent = message;
   toastMessage.appendChild(messageText);
-
-  // Add the close button
   const closeButton = document.createElement('button');
   closeButton.classList.add('toast-close-btn');
-  closeButton.innerHTML = '&times;'; // 'x' icon
+  closeButton.innerHTML = '&times;';
   closeButton.title = 'Dismiss message';
-  closeButton.addEventListener('click', () => removeToast(toastMessage)); // Attach click listener
+  closeButton.addEventListener('click', () => removeToast(toastMessage));
   toastMessage.appendChild(closeButton);
-
   toastContainer.appendChild(toastMessage);
-
   requestAnimationFrame(() => {
     toastMessage.classList.add('show');
   });
-
   if (!isError) {
     setTimeout(() => removeToast(toastMessage), 3000);
   }
 }
 
-function loadSettings() {
-  chrome.storage.sync.get(
-    ['apiProvider', 'apiKey', 'apiEndpoint', 'aiModel', 'customPrompt'],
-    function (items) {
-      document.getElementById(API_PROVIDER_ID).value =
-        items.apiProvider || 'gemini';
-      document.getElementById(API_KEY_ID).value = items.apiKey || '';
-      document.getElementById(API_ENDPOINT_ID).value =
-        items.apiEndpoint || DEFAULT_ENDPOINTS['gemini'];
-      document.getElementById(CUSTOM_PROMPT_ID).value =
-        items.customPrompt || DEFAULT_TRANSLATION_PROMPT;
-
-      updateModelAndEndpointDefaults();
-      if (items.aiModel) {
-        document.getElementById(AI_MODEL_ID).value = items.aiModel;
-      } else {
-        document.getElementById(AI_MODEL_ID).value =
-          document.getElementById(AI_MODEL_ID).options[0]?.value || '';
-      }
-    }
-  );
+async function loadSettings() {
+  const items = await browser.storage.sync.get([
+    'apiProvider',
+    'apiKey',
+    'apiEndpoint',
+    'aiModel',
+    'customPrompt',
+  ]);
+  document.getElementById(API_PROVIDER_ID).value = items.apiProvider || 'gemini';
+  document.getElementById(API_KEY_ID).value = items.apiKey || '';
+  document.getElementById(API_ENDPOINT_ID).value = items.apiEndpoint || DEFAULT_ENDPOINTS['gemini'];
+  document.getElementById(CUSTOM_PROMPT_ID).value = items.customPrompt || DEFAULT_TRANSLATION_PROMPT;
+  updateModelAndEndpointDefaults();
+  if (items.aiModel) {
+    document.getElementById(AI_MODEL_ID).value = items.aiModel;
+  } else {
+    document.getElementById(AI_MODEL_ID).value = document.getElementById(AI_MODEL_ID).options[0]?.value || '';
+  }
 }
 
-function saveSettings() {
+async function saveSettings() {
   const apiProvider = document.getElementById(API_PROVIDER_ID).value;
   const apiKey = document.getElementById(API_KEY_ID).value;
   const apiEndpoint = document.getElementById(API_ENDPOINT_ID).value;
   const aiModel = document.getElementById(AI_MODEL_ID).value;
   const customPrompt = document.getElementById(CUSTOM_PROMPT_ID).value;
-
-  chrome.storage.sync.set(
-    {
+  try {
+    await browser.storage.sync.set({
       apiProvider: apiProvider,
       apiKey: apiKey,
       apiEndpoint: apiEndpoint,
       aiModel: aiModel,
       customPrompt: customPrompt,
-    },
-    function () {
-      if (chrome.runtime.lastError) {
-        showStatus(
-          'Error saving settings: ' + chrome.runtime.lastError.message,
-          true
-        );
-      } else {
-        showStatus('Settings saved successfully!');
-      }
-    }
-  );
+    });
+    showStatus('Settings saved successfully!');
+  } catch (error) {
+    showStatus(`Error saving settings: ${error.message}`, true);
+  }
 }
 
 function updateModelAndEndpointDefaults() {
   const provider = document.getElementById(API_PROVIDER_ID).value;
   const aiModelSelect = document.getElementById(AI_MODEL_ID);
   const apiEndpointInput = document.getElementById(API_ENDPOINT_ID);
-
   aiModelSelect.innerHTML = '';
-
   const models = AI_MODELS[provider] || [];
   models.forEach((model) => {
     const option = document.createElement('option');
@@ -254,10 +229,8 @@ function updateModelAndEndpointDefaults() {
     option.textContent = model.text;
     aiModelSelect.appendChild(option);
   });
-
   const currentEndpointValue = apiEndpointInput.value;
   const defaultEndpoint = DEFAULT_ENDPOINTS[provider];
-
   if (
     currentEndpointValue === '' ||
     (provider === 'gemini' && currentEndpointValue.includes('openai.com')) ||
@@ -265,7 +238,6 @@ function updateModelAndEndpointDefaults() {
   ) {
     apiEndpointInput.value = defaultEndpoint;
   }
-
   aiModelSelect.value = aiModelSelect.options[0]?.value || '';
 }
 
