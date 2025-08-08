@@ -41,8 +41,7 @@
 
       <div class="setting-group">
         <label for="apiEndpoint">API Endpoint:</label>
-        <input type="text" id="apiEndpoint"
-          placeholder="e.g., https://generativelanguage.googleapis.com/v1beta/models/">
+        <input type="text" id="apiEndpoint" placeholder="e.g., https://generativelanguage.googleapis.com/v1beta/models/">
       </div>
 
       <div class="setting-group">
@@ -57,7 +56,6 @@
         </div>
         <textarea id="customPrompt" rows="4"
           placeholder="e.g., Translate the following text into Vietnamese: '{text}'"></textarea>
-        <small>Use <code>{text}</code> as a placeholder for the selected text.</small>
       </div>
 
       <div class="buttons-group">
@@ -68,6 +66,7 @@
   </div>
   <div id="toastContainer"></div>
 
+  <script src="../browser-polyfill.js"></script>
   <script src="popup.js"></script>
 </body>
 
