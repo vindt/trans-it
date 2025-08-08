@@ -22,6 +22,7 @@
 #translation-tooltip.show {
   opacity: 1;
   visibility: visible;
+  font-size: 13px;
 }
 
 #translation-tooltip::before,
@@ -69,7 +70,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 48px;
+  width: 25px;
   opacity: 48px;
   visibility: hidden;
   transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
@@ -81,8 +82,8 @@
 }
 
 #translation-icon img {
-  width: 16px;
-  height: 16px;
+  width: 25px;
+  height: 25px;
   display: block;
 }
 /* --- Translation Loading Animation --- */
