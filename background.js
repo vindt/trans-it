@@ -9,6 +9,22 @@ if (typeof self.browser === "undefined") {
   }
 }
 
+function setupRules() {
+  const viewerUrl = chrome.runtime.getURL('web/viewer.html');
+  chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: [1],
+    addRules: [{
+      id: 1, priority: 1,
+      action: { type: 'redirect', redirect: { regexSubstitution: `${viewerUrl}?file=\\1` } },
+      condition: { regexFilter: '^(https?://.*\\.pdf(\\?.*)?|file://.*\\.pdf)$', resourceTypes: ['main_frame'] }
+    }]
+  });
+}
+
+browser.runtime.onInstalled.addListener(() => {
+  setupRules();
+});
+
 // Function to get settings from storage
 async function getExtensionSettings() {
   return browser.storage.sync.get([
@@ -155,6 +171,34 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
           action: 'displayTranslationError',
           errorMessage: error.message || 'An unknown error occurred.',
           selectionRect: message.rect,
+        });
+      } catch (sendError) {
+        console.error("Failed to send error message to content script:", sendError);
+      }
+      return { success: false, error: error.message };
+    }
+  }
+
+  if (message.action === 'translatePDFText') {
+    if (!message.text) {
+      return {
+        success: false,
+        error: 'No text provided for translation.',
+      };
+    }
+
+    try {
+      const translated = await getTranslatedText(message.text);
+      await browser.tabs.sendMessage(sender.tab.id, {
+        action: 'displayPDFTranslation',
+        translatedText: translated,
+      });
+      return { success: true };
+    } catch (error) {
+     try {
+        await browser.tabs.sendMessage(sender.tab.id, {
+          action: 'displayPDFTranslationError',
+          errorMessage: error.message || 'An unknown error occurred.',
         });
       } catch (sendError) {
         console.error("Failed to send error message to content script:", sendError);
